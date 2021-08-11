@@ -1,16 +1,21 @@
 package com.burakkaraoglan.jpamaster;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.mapstruct.Mapper;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.context.annotation.Bean;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Repository;
@@ -44,11 +49,27 @@ import java.util.List;
 import java.util.Set;
 
 @SpringBootApplication
+@EnableCaching
 public class JpaMasterApplication {
     public static void main(String[] args) {
         SpringApplication.run(JpaMasterApplication.class, args);
     }
 
+    @Bean
+    @Transactional
+    CommandLineRunner commandLineRunner(PersonRepository personRepository) {
+        return args -> {
+            Person person = Person.builder()
+                    .name("Ahmet")
+                    .build();
+            person.getAddresses().addAll(Arrays.asList(
+                    Address.builder()
+                            .street("ahmetFirstStreet")
+                            .person(person)
+                            .build()));
+            personRepository.save(person);
+        };
+    }
 }
 
 @RestController
@@ -58,6 +79,7 @@ class PersonController {
     private final PersonService personService;
 
     @GetMapping
+    @Cacheable("people")
     public List<PersonDto> getAllPeople() {
         return personService.findAllPeople();
     }
@@ -65,32 +87,54 @@ class PersonController {
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 class PersonService {
     private final PersonRepository personRepository;
     private final PersonMapper personMapper;
+    private final AddressRepository addressRepository;
 
+    @Transactional(readOnly = true)
     public List<PersonDto> findAllPeople() {
+        log.warn("1st {}", personMapper.personToPersonDto(personRepository.findAllPeople("Burak").get(0)));
+        log.warn("2sc {}", personRepository.findAll());
+        log.warn("3rd {}", personRepository.findAll());
+        log.warn("4 {}", personRepository.findById(1L));
+        log.warn("5 {}", personRepository.findById(4L));
+
         return personMapper.personListToPersonDtoList(personRepository.findAll());
     }
 }
 
-@Mapper(componentModel = "spring")
-interface PersonMapper {
-    PersonDto personToPersonDto(Person person);
-
-    List<PersonDto> personListToPersonDtoList(List<Person> person);
-
-}
-
+@Setter
+@Getter
+@ToString
 class PersonDto {
     @NotBlank
+    @JsonProperty("name")
     private String name;
     private Set<AddressDto> addresses;
 }
 
+@Setter
+@Getter
+@ToString
 class AddressDto {
     @NotBlank
     private String street;
+}
+
+@Mapper
+interface AddressMapper {
+    AddressDto addressToAddressDto(Address address);
+}
+
+@Mapper// (componentModel = "spring", uses = {AddressMapper.class})
+interface PersonMapper {
+
+    PersonDto personToPersonDto(Person person);
+
+    List<PersonDto> personListToPersonDtoList(List<Person> person);
+
 }
 
 @Component
@@ -118,9 +162,9 @@ class CommandLineRunnerImpl implements CommandLineRunner {
                         .build()));
         personRepository.save(person);
 
-        log.warn("{}", personRepository.findAll());
-        log.debug("{}", personRepository.findAllPeople("Burak"));
-        log.debug("{}", addressRepository.findAll());
+        //log.warn("{}", personRepository.findAll());
+        //log.debug("{}", personRepository.findAllPeople("Burak"));
+        //log.debug("{}", addressRepository.findAll());
     }
 }
 
@@ -128,7 +172,9 @@ class CommandLineRunnerImpl implements CommandLineRunner {
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@Data
+@Getter
+@Setter
+@ToString
 class Person {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -145,6 +191,8 @@ class Person {
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@Getter
+@Setter
 @ToString(exclude = "person")
 class Address {
     @Id

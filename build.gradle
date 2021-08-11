@@ -14,6 +14,15 @@ configurations {
     }
 }
 
+compileJava {
+    options.compilerArgs += [
+            '-Amapstruct.suppressGeneratorTimestamp=true',
+            '-Amapstruct.suppressGeneratorVersionInfoComment=true',
+            '-Amapstruct.verbose=true',
+            '-Amapstruct.defaultComponentModel=spring'
+    ]
+}
+
 repositories {
     mavenCentral()
 }
@@ -24,11 +33,13 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.apache.commons:commons-lang3:3.11'
     implementation 'org.mapstruct:mapstruct:1.4.2.Final'
+    implementation 'org.projectlombok:lombok'
+    implementation 'net.sf.ehcache:ehcache-core:2.6.11'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     annotationProcessor 'org.mapstruct:mapstruct-processor:1.4.2.Final'
     annotationProcessor 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
     runtimeOnly 'com.h2database:h2'
-    compileOnly 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 

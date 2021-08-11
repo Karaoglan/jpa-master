@@ -10,7 +10,11 @@ spring:
       ddl-auto: create-drop
     show-sql: true
     properties:
-      hibernate.format_sql: true
+      hibernate:
+        format_sql: true
+  cache:
+    ehcache:
+      config: classpath:ehcache.xml
   h2:
     console:
       enabled: true
